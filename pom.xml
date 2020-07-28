@@ -11,8 +11,9 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
 
-    <sonar.projectKey>udf-azure-boards</sonar.projectKey>
-    <sonar.organization>overops</sonar.organization>
+    <sonar.projectKey>ccaspanello_udf-azure-boards</sonar.projectKey>
+    <sonar.organization>ccaspanello</sonar.organization>
+
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
   </properties>
 
