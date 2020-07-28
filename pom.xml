@@ -16,9 +16,10 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <sonar.projectKey>udf-azure-boards</sonar.projectKey>
-        <sonar.organization>overops</sonar.organization>
+        <sonar.projectKey>ccaspanello_udf-azure-boards</sonar.projectKey>
+        <sonar.organization>ccaspanello</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.login>ee9491457eb4c9fe74fa6f5d8ebdda6577f97823</sonar.login>
         <sonar.coverage.jacoco.xmlReportPaths>${basedir}/target/site/jacoco</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
