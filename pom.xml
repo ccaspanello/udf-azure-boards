@@ -13,7 +13,7 @@
 
     <sonar.projectKey>takipi_udf-azure-boards</sonar.projectKey>
     <sonar.organization>takipi</sonar.organization>
-    <force.push></force.push>
+    <sonar.login>${env.SONAR_TOKEN}</sonar.login>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
   </properties>
 
