@@ -13,7 +13,7 @@
 
     <sonar.projectKey>ccaspanello_udf-azure-boards</sonar.projectKey>
     <sonar.organization>ccaspanello</sonar.organization>
-
+    <force.push></force.push>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
   </properties>
 
