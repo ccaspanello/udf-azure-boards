@@ -67,56 +67,7 @@ public class AzureBoardsFunction {
 
             String name = "[OverOps] New " + event.getName() + " in " + event.getIntroducedByApplication() + " release " + event.getIntroducedBy();
             String description = new DescriptionGenerator().generate(event);
-            if (input.debug) {
-                System.out.println(description);
-            }
-
-            List<AzureItem> azureItems = new ArrayList<>();
-
-            azureItems.add(new AzureItem("add", "/fields/System.Title", "OverOps", name));
-            azureItems.add(new AzureItem("add", "/fields/System.Description", null, description));
-            azureItems.add(new AzureItem("add", "/fields/System.Tags", null, "OverOps"));
-            // Only provide workItemType if defined; if not present allow Azure to default values
-            if (!StringUtils.isEmpty(input.workItemType)) {
-                azureItems.add(new AzureItem("add", "/fields/System.WorkItemType", null, input.workItemType));
-            }
-            // Only provide priority if defined; if not present allow Azure to default values
-            if (input.priority > 0) {
-                azureItems.add(new AzureItem("add", "/fields/Microsoft.VSTS.Common.Priority", null, input.priority));
-            }
-            // Populate custom field / field overrides
-            for(String key : input.otherFields().keySet()){
-                azureItems.add(new AzureItem("add", "/fields/"+key, null, input.otherFields().get(key)));
-            }
-
-            Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-            String bodyContent = gson.toJson(azureItems);
-
-            // Authenticate
-            String credential = Credentials.basic(input.authUser, input.authToken);
-
-            // Create HTTP Client
-            OkHttpClient client = new OkHttpClient.Builder().build();
-            MediaType mediaType = MediaType.parse("application/json-patch+json");
-            RequestBody body = RequestBody.create(mediaType, bodyContent);
-
-            // Send Request
-            String rootUrl = input.azureUrl + "/" + input.organization + "/" + input.project;
-            URL url = new URL(rootUrl + "/_apis/wit/workitems/$task?api-version=5.0");
-            Request request = new Request.Builder()
-                    .url(url)
-                    .method("POST", body)
-                    .addHeader("Content-Type", "application/json-patch+json")
-                    .header("Authorization", credential)
-                    .build();
-            Response result = client.newCall(request).execute();
-            if (result.code() != 200) {
-                System.out.println("Error creating Azure Task:");
-                System.out.println(result.body().string());
-            } else {
-                AzureWorkItemResponse response = gson.fromJson(result.body().string(), AzureWorkItemResponse.class);
-                System.out.println("Work Item Created: " + rootUrl + "/_workitems/edit/" + response.getId() + "/");
-            }
+            send(input, name, description);
 
         } catch (Exception e) {
             System.out.println("Exception: ");
@@ -126,6 +77,59 @@ public class AzureBoardsFunction {
             e.printStackTrace(System.out);
             System.out.println("**************************************************");
             throw new RuntimeException("Unexpected error running Azure Boards Function", e);
+        }
+    }
+
+    public static void send(AzureBoardsInput input, String name, String description) throws Exception {
+        if (input.debug) {
+            System.out.println(description);
+        }
+
+        List<AzureItem> azureItems = new ArrayList<>();
+
+        azureItems.add(new AzureItem("add", "/fields/System.Title", "OverOps", name));
+        azureItems.add(new AzureItem("add", "/fields/System.Description", null, description));
+        azureItems.add(new AzureItem("add", "/fields/System.Tags", null, "OverOps"));
+        // Only provide workItemType if defined; if not present allow Azure to default values
+        if (!StringUtils.isEmpty(input.workItemType)) {
+            azureItems.add(new AzureItem("add", "/fields/System.WorkItemType", null, input.workItemType));
+        }
+        // Only provide priority if defined; if not present allow Azure to default values
+        if (input.priority > 0) {
+            azureItems.add(new AzureItem("add", "/fields/Microsoft.VSTS.Common.Priority", null, input.priority));
+        }
+        // Populate custom field / field overrides
+        for(String key : input.otherFields().keySet()){
+            azureItems.add(new AzureItem("add", "/fields/"+key, null, input.otherFields().get(key)));
+        }
+
+        Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+        String bodyContent = gson.toJson(azureItems);
+
+        // Authenticate
+        String credential = Credentials.basic(input.authUser, input.authToken);
+
+        // Create HTTP Client
+        OkHttpClient client = new OkHttpClient.Builder().build();
+        MediaType mediaType = MediaType.parse("application/json-patch+json");
+        RequestBody body = RequestBody.create(mediaType, bodyContent);
+
+        // Send Request
+        String rootUrl = input.azureUrl + "/" + input.organization + "/" + input.project;
+        URL url = new URL(rootUrl + "/_apis/wit/workitems/$task?api-version=5.0");
+        Request request = new Request.Builder()
+                .url(url)
+                .method("POST", body)
+                .addHeader("Content-Type", "application/json-patch+json")
+                .header("Authorization", credential)
+                .build();
+        Response result = client.newCall(request).execute();
+        if (result.code() != 200) {
+            System.out.println("Error creating Azure Task:");
+            System.out.println(result.body().string());
+        } else {
+            AzureWorkItemResponse response = gson.fromJson(result.body().string(), AzureWorkItemResponse.class);
+            System.out.println("Work Item Created: " + rootUrl + "/_workitems/edit/" + response.getId() + "/");
         }
     }
 
@@ -166,7 +170,18 @@ public class AzureBoardsFunction {
         if (!StringUtils.isEmpty(input.timeZone)) {
             DateTimeZone.forID(input.timeZone);
         }
-        
+
+        if(input.runTest){
+            try{
+                String name = "[OverOps] Configuration Test";
+                String description = "This message is generated to test integration.  Feel free to delete this, no action further action is required.";
+                send(input,name, description);
+                input.runTest = false;
+            }catch(Exception e){
+                throw new IllegalArgumentException("Test Message Unsuccessful", e);
+            }
+        }
+
         return input;
     }
 
