@@ -61,7 +61,7 @@
         # Microsoft.VSTS.Common.Severity=someValue
         # Custom.ProductUpdate=someValue
 
-        # Run Test Flag - If set to true run a test message during configuration validation (does not persist)
+        # Run Test Flag - If set to true run a test message during configuration validation
         # Default: false
         runTest=
 

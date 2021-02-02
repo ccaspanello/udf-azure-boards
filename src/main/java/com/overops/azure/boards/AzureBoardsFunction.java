@@ -35,7 +35,7 @@ public class AzureBoardsFunction {
      * @return
      */
     public static String validateInput(String rawInput) {
-        return getLabelInput(rawInput).toString();
+        return getLabelInput(rawInput, true).toString();
     }
 
     /**
@@ -47,7 +47,7 @@ public class AzureBoardsFunction {
     public static void execute(String rawContextArgs, String rawInput) {
         try {
             ContextArgs args = (new Gson()).fromJson(rawContextArgs, ContextArgs.class);
-            AzureBoardsInput input = getLabelInput(rawInput);
+            AzureBoardsInput input = getLabelInput(rawInput, false);
 
             // Fetch Event
             ApiClient apiClient = args.apiClient();
@@ -61,13 +61,22 @@ public class AzureBoardsFunction {
             if (eventResult == null) {
                 throw new AzureBoardsException("Error: Event query came back empty.");
             }
+            Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+            String rootUrl = input.azureUrl + "/" + input.organization + "/" + input.project;
 
             // Create Azure Items
             EventView event = new EventView(args, input, eventResult);
 
             String name = "[OverOps] New " + event.getName() + " in " + event.getIntroducedByApplication() + " release " + event.getIntroducedBy();
             String description = new DescriptionGenerator().generate(event);
-            send(input, name, description);
+            Response result = send(input, name, description);
+            if (result.code() != 200) {
+                System.out.println("Error creating Azure Task:");
+                System.out.println(result.body().string());
+            } else {
+                AzureWorkItemResponse response = gson.fromJson(result.body().string(), AzureWorkItemResponse.class);
+                System.out.println("Work Item Created: " + rootUrl + "/_workitems/edit/" + response.getId() + "/");
+            }
 
         } catch (Exception e) {
             System.out.println("Exception: ");
@@ -80,7 +89,7 @@ public class AzureBoardsFunction {
         }
     }
 
-    public static void send(AzureBoardsInput input, String name, String description) throws Exception {
+    public static Response send(AzureBoardsInput input, String name, String description) throws Exception {
         if (input.debug) {
             System.out.println(description);
         }
@@ -123,17 +132,10 @@ public class AzureBoardsFunction {
                 .addHeader("Content-Type", "application/json-patch+json")
                 .header("Authorization", credential)
                 .build();
-        Response result = client.newCall(request).execute();
-        if (result.code() != 200) {
-            System.out.println("Error creating Azure Task:");
-            System.out.println(result.body().string());
-        } else {
-            AzureWorkItemResponse response = gson.fromJson(result.body().string(), AzureWorkItemResponse.class);
-            System.out.println("Work Item Created: " + rootUrl + "/_workitems/edit/" + response.getId() + "/");
-        }
+        return client.newCall(request).execute();
     }
 
-    public static AzureBoardsInput getLabelInput(String rawInput) {
+    public static AzureBoardsInput getLabelInput(String rawInput, boolean test) {
 
         if (Strings.isNullOrEmpty(rawInput))
             throw new IllegalArgumentException("Input is empty");
@@ -171,14 +173,22 @@ public class AzureBoardsFunction {
             DateTimeZone.forID(input.timeZone);
         }
 
-        if(input.runTest){
+        if(test && input.runTest){
             try{
                 String name = "[OverOps] Configuration Test";
                 String description = "This message is generated to test integration.  Feel free to delete this, no action further action is required.";
-                send(input,name, description);
-                input.runTest = false;
+                Response result = send(input,name, description);
+                if (result.code() != 200) {
+                    String payload = result.body().string();
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Test Failed (").append(result.code()).append(")");
+                    if(!payload.isEmpty()){
+                      sb.append(" - ").append(payload);
+                    }
+                    throw new IllegalArgumentException(sb.toString());
+                }
             }catch(Exception e){
-                throw new IllegalArgumentException("Test Message Unsuccessful", e);
+                throw new IllegalArgumentException(e.getMessage());
             }
         }
 
